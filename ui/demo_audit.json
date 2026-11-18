@@ -1,0 +1,103 @@
+{
+  "captured_at": "2026-11-17",
+  "region": "westus2",
+  "before": "param location string = 'westus2'\n\nresource badStorage 'Microsoft.Storage/storageAccounts@2023-01-01' = {\n  name: 'stauditdemo001'\n  location: location\n  sku: {\n    name: 'Standard_GRS'\n  }\n  kind: 'StorageV2'\n  properties: {\n    supportsHttpsTrafficOnly: false\n    allowBlobPublicAccess: true\n    minimumTlsVersion: 'TLS1_0'\n  }\n}\n\nresource oversizedVm 'Microsoft.Compute/virtualMachines@2023-09-01' = {\n  name: 'vm-dev-oversized'\n  location: location\n  properties: {\n    hardwareProfile: {\n      vmSize: 'Standard_E16s_v5'\n    }\n    storageProfile: {\n      osDisk: {\n        createOption: 'FromImage'\n        managedDisk: {\n          storageAccountType: 'Standard_LRS'\n        }\n      }\n    }\n  }\n}\n",
+  "after": "param location string = 'westus2'\n\n@description('Deployment environment. Drives the Environment tag.')\n@allowed([\n  'dev'\n  'test'\n  'prod'\n])\nparam environment string = 'dev'\n\n@description('Owner of the resources (team or individual). Required tag.')\n@minLength(1)\nparam owner string\n\n@description('Cost center for chargeback. Required tag.')\n@minLength(1)\nparam costCenter string\n\n@description('VM size. Restricted to approved general-purpose SKUs; E/M series are not permitted.')\n@allowed([\n  'Standard_B2s'\n  'Standard_D2s_v5'\n])\nparam vmSize string = 'Standard_B2s'\n\nvar requiredTags = {\n  Environment: environment\n  Owner: owner\n  CostCenter: costCenter\n}\n\nresource badStorage 'Microsoft.Storage/storageAccounts@2023-01-01' = {\n  name: 'stauditdemo001'\n  location: location\n  tags: requiredTags\n  sku: {\n    name: 'Standard_GRS'\n  }\n  kind: 'StorageV2'\n  properties: {\n    supportsHttpsTrafficOnly: true\n    allowBlobPublicAccess: false\n    minimumTlsVersion: 'TLS1_2'\n  }\n}\n\nresource oversizedVm 'Microsoft.Compute/virtualMachines@2023-09-01' = {\n  name: 'vm-dev-oversized'\n  location: location\n  tags: requiredTags\n  properties: {\n    hardwareProfile: {\n      vmSize: vmSize\n    }\n    securityProfile: {\n      encryptionAtHost: true\n    }\n    storageProfile: {\n      osDisk: {\n        createOption: 'FromImage'\n        managedDisk: {\n          storageAccountType: 'StandardSSD_LRS'\n        }\n      }\n    }\n  }\n}\n",
+  "report": {
+    "summary": "Fixed 8 governance violations across 2 resources: the storage account allowed HTTP, TLS 1.0 and public blob access; the non-prod VM used an oversized memory-optimized Standard_E16s_v5 SKU with a Standard HDD OS disk and no encryption at host; neither resource carried the required Environment/Owner/CostCenter tags. VM size is now constrained to approved SKUs via @allowed. Remediated file compiles and lints clean.",
+    "violations": [
+      {
+        "resource": "badStorage",
+        "category": "security",
+        "rule": "supportsHttpsTrafficOnly must be true",
+        "before": "supportsHttpsTrafficOnly: false",
+        "after": "supportsHttpsTrafficOnly: true",
+        "severity": "high"
+      },
+      {
+        "resource": "badStorage",
+        "category": "security",
+        "rule": "allowBlobPublicAccess must be false",
+        "before": "allowBlobPublicAccess: true",
+        "after": "allowBlobPublicAccess: false",
+        "severity": "high"
+      },
+      {
+        "resource": "badStorage",
+        "category": "security",
+        "rule": "minimumTlsVersion must be TLS1_2",
+        "before": "minimumTlsVersion: 'TLS1_0'",
+        "after": "minimumTlsVersion: 'TLS1_2'",
+        "severity": "high"
+      },
+      {
+        "resource": "badStorage",
+        "category": "tagging",
+        "rule": "Environment, Owner, CostCenter tags required",
+        "before": "no tags",
+        "after": "tags: requiredTags",
+        "severity": "medium"
+      },
+      {
+        "resource": "oversizedVm",
+        "category": "sizing",
+        "rule": "No Standard_E/M series in non-prod",
+        "before": "vmSize: 'Standard_E16s_v5'",
+        "after": "vmSize param, @allowed Standard_B2s | Standard_D2s_v5 (default Standard_B2s)",
+        "severity": "high"
+      },
+      {
+        "resource": "oversizedVm",
+        "category": "disk",
+        "rule": "OS disk must be StandardSSD_LRS or Premium_LRS",
+        "before": "storageAccountType: 'Standard_LRS'",
+        "after": "storageAccountType: 'StandardSSD_LRS'",
+        "severity": "medium"
+      },
+      {
+        "resource": "oversizedVm",
+        "category": "security",
+        "rule": "Encryption at host must be enabled",
+        "before": "no securityProfile",
+        "after": "securityProfile.encryptionAtHost: true",
+        "severity": "high"
+      },
+      {
+        "resource": "oversizedVm",
+        "category": "tagging",
+        "rule": "Environment, Owner, CostCenter tags required",
+        "before": "no tags",
+        "after": "tags: requiredTags",
+        "severity": "medium"
+      }
+    ],
+    "pricing": {
+      "region": "westus2",
+      "before": [
+        {
+          "resource": "oversizedVm",
+          "service_name": "Virtual Machines",
+          "arm_sku_name": "Standard_E16s_v5",
+          "unit_of_measure": "1 Hour",
+          "hourly_usd": 1.008,
+          "monthly_usd": 735.84
+        }
+      ],
+      "after": [
+        {
+          "resource": "oversizedVm",
+          "service_name": "Virtual Machines",
+          "arm_sku_name": "Standard_B2s",
+          "unit_of_measure": "1 Hour",
+          "hourly_usd": 0.0416,
+          "monthly_usd": 30.37
+        }
+      ]
+    },
+    "validation": {
+      "bicep_build_passed": true,
+      "bicep_lint_passed": true,
+      "notes": "Storage account Standard_GRS is billed per GB stored and is not included in monthly totals."
+    }
+  }
+}

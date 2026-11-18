@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "azure-pricing": {
+      "type": "stdio",
+      "command": "/home/nathan/azure-iac-auditor/mcp-server/.venv/bin/python",
+      "args": [
+        "/home/nathan/azure-iac-auditor/mcp-server/pricing_server.py"
+      ],
+      "env": {}
+    }
+  }
+}
