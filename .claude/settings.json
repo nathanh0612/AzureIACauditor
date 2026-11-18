@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if [[ \"$CLAUDE_TOOL_INPUT_FILE_PATH\" == *.bicep ]]; then bicep build \"$CLAUDE_TOOL_INPUT_FILE_PATH\" --stdout > /dev/null && bicep lint \"$CLAUDE_TOOL_INPUT_FILE_PATH\"; fi'"
+          }
+        ]
+      }
+    ]
+  }
+}
