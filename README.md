@@ -2,7 +2,7 @@
 
 Governance checks, security auditing and live retail SKU cost analysis for Azure Bicep. It runs entirely on your machine and needs no Azure subscription.
 
-**Live demo:** [LIVE_APP_URL](LIVE_APP_URL) (Streamlit Community Cloud)
+**Live demo:** [azure-iac-auditor.streamlit.app](https://azure-iac-auditor.streamlit.app/) (Streamlit Community Cloud)
 
 The sample audit fixes 8 policy violations in a flawed lab template. It cuts the dev VM from **$735.84/mo** (`Standard_E16s_v5`) to **$30.37/mo** (`Standard_B2s`) in `westus2`, using live pay-as-you-go retail prices.
 
